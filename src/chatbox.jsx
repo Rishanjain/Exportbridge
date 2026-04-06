@@ -277,13 +277,14 @@ Respond ONLY with valid JSON (no markdown):
 
   return (
     <div style={{
-      minHeight: "100vh",
+      height: "100%",
       background: "linear-gradient(160deg, #050e1a 0%, #0b1d2e 50%, #071520 100%)",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       fontFamily: "'Georgia', serif",
       color: "#e8e8e8",
+      overflowY: "auto",
     }}>
       {/* Header */}
       <div style={{
