@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
-export default function AppLayout({ currentPage, setCurrentPage, children }) {
+export default function AppLayout({ currentPage, setCurrentPage, onLogout, children }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -10,6 +10,7 @@ export default function AppLayout({ currentPage, setCurrentPage, children }) {
       <Sidebar
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
+        onLogout={onLogout}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
       />

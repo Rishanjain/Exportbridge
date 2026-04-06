@@ -1,38 +1,75 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Shield, X, ExternalLink } from 'lucide-react';
 import { Card, Badge, ProgressBar, SectionHeader } from '../components/ui/index';
-import { buyers } from '../data/mockData';
+import { apiFetch } from '../lib/api';
 
 const demandVariant = { High: 'success', Medium: 'warning', Low: 'danger' };
 
 export default function Buyers() {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
+  const [buyers, setBuyers] = useState([]);
   const [connected, setConnected] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [savingId, setSavingId] = useState(null);
 
-  const industries = ['All', ...Array.from(new Set(buyers.map(b => b.industry)))];
-  const filtered = buyers.filter(b => {
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError('');
+    apiFetch('/api/buyers')
+      .then((data) => {
+        if (!mounted) return;
+        setBuyers(data.buyers || []);
+        setConnected(data.connectedBuyerIds || []);
+      })
+      .catch((e) => mounted && setError(e.message || 'Failed to load buyers'))
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const industries = useMemo(() => ['All', ...Array.from(new Set(buyers.map((b) => b.industry)))], [buyers]);
+  const filtered = buyers.filter((b) => {
     const matchIndustry = filter === 'All' || b.industry === filter;
     const matchSearch = search === '' || b.company.toLowerCase().includes(search.toLowerCase()) || b.country.toLowerCase().includes(search.toLowerCase());
     return matchIndustry && matchSearch;
   });
 
-  const toggle = (id) => setConnected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggle = async (id) => {
+    setSavingId(id);
+    try {
+      const data = await apiFetch(`/api/buyers/${id}/connect`, { method: 'POST' });
+      setConnected(data.connectedBuyerIds || []);
+    } catch (e) {
+      setError(e.message || 'Unable to connect');
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <SectionHeader
         title="Buyer Directory"
-        subtitle={`${buyers.length} verified international buyers`}
+        subtitle={loading ? 'Loading buyers…' : `${buyers.length} international buyers`}
         action={
           <div className="flex items-center gap-2">
             <Badge variant="success">
               <Shield size={10} />
-              {buyers.filter(b => b.verified).length} Verified
+              {buyers.filter((b) => b.verified).length} Verified
             </Badge>
           </div>
         }
       />
+
+      {error && (
+        <Card hover={false} className="border-red-500/20">
+          <p className="text-red-400 text-sm">{error}</p>
+        </Card>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
@@ -62,6 +99,13 @@ export default function Buyers() {
 
       {/* Buyer Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {loading && Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="glass-card p-6 animate-pulse">
+            <div className="h-4 bg-surface-500 rounded w-2/3 mb-3" />
+            <div className="h-3 bg-surface-500 rounded w-1/2 mb-6" />
+            <div className="h-10 bg-surface-500 rounded" />
+          </div>
+        ))}
         {filtered.map((buyer) => {
           const isConnected = connected.includes(buyer.id);
           return (
@@ -116,13 +160,14 @@ export default function Buyers() {
               <div className="flex gap-2">
                 <button
                   onClick={() => toggle(buyer.id)}
+                  disabled={savingId === buyer.id}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                     isConnected
                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                       : 'btn-primary'
                   }`}
                 >
-                  {isConnected ? '✓ Connected' : 'Connect'}
+                  {savingId === buyer.id ? 'Saving…' : isConnected ? '✓ Connected' : 'Connect'}
                 </button>
                 <button className="w-10 h-10 rounded-xl bg-surface-600 border border-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-brand-500/30 transition-all">
                   <ExternalLink size={14} />

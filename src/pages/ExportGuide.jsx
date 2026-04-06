@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, Circle, Clock, ChevronDown, ChevronUp, ExternalLink, FileText } from 'lucide-react';
 import { Card, Badge, ProgressBar, SectionHeader } from '../components/ui/index';
-import { exportGuideSteps } from '../data/mockData';
+import { apiFetch } from '../lib/api';
 
 const statusConfig = {
   completed: { icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', label: 'Completed', badge: 'success' },
@@ -20,16 +20,41 @@ const categoryColors = {
 
 export default function ExportGuide() {
   const [expanded, setExpanded] = useState(null);
-  const [steps, setSteps] = useState(exportGuideSteps);
+  const [steps, setSteps] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [savingId, setSavingId] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError('');
+    apiFetch('/api/guide/steps')
+      .then((data) => mounted && setSteps(data.steps || []))
+      .catch((e) => mounted && setError(e.message || 'Failed to load guide'))
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const completed = steps.filter(s => s.status === 'completed').length;
   const inProgress = steps.filter(s => s.status === 'in-progress').length;
   const progress = Math.round((completed / steps.length) * 100);
 
   const toggleExpand = (id) => setExpanded(expanded === id ? null : id);
-  const markComplete = (id) => {
-    setSteps(prev => prev.map(s => s.id === id ? { ...s, status: 'completed' } : s));
-    if (expanded === id) setExpanded(null);
+  const markComplete = async (id) => {
+    setSavingId(id);
+    setError('');
+    try {
+      const data = await apiFetch(`/api/guide/steps/${id}/status`, { method: 'POST', body: { status: 'completed' } });
+      setSteps(data.steps || []);
+      if (expanded === id) setExpanded(null);
+    } catch (e) {
+      setError(e.message || 'Unable to update step');
+    } finally {
+      setSavingId(null);
+    }
   };
 
   return (
@@ -39,6 +64,18 @@ export default function ExportGuide() {
         subtitle="Complete these steps to become export-ready"
         action={<Badge variant="info">{completed}/{steps.length} Done</Badge>}
       />
+
+      {error && (
+        <Card hover={false} className="border-red-500/20">
+          <p className="text-red-400 text-sm">{error}</p>
+        </Card>
+      )}
+
+      {loading && (
+        <Card>
+          <p className="text-slate-400 text-sm">Loading steps…</p>
+        </Card>
+      )}
 
       {/* Progress Overview */}
       <Card className="border-brand-500/20 bg-gradient-to-br from-brand-500/10 to-transparent">
@@ -128,10 +165,11 @@ export default function ExportGuide() {
                       {step.status !== 'completed' && (
                         <button
                           onClick={() => markComplete(step.id)}
+                          disabled={savingId === step.id}
                           className="btn-primary text-sm py-2.5 flex items-center justify-center gap-2"
                         >
                           <CheckCircle2 size={14} />
-                          Mark as Complete
+                          {savingId === step.id ? 'Saving…' : 'Mark as Complete'}
                         </button>
                       )}
                       <a

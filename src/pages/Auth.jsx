@@ -4,24 +4,59 @@ import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 function AuthForm({ isLogin, setPage }) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    company: '',
+  });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError('');
+
+    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
+    const payload = isLogin
+      ? { email: form.email, password: form.password }
+      : {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          company: form.company,
+        };
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || 'Unable to authenticate');
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       setPage('dashboard');
-    }, 1200);
+    } catch (err) {
+      setError('Network error: please try again');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-surface-900 flex items-center justify-center px-6 relative overflow-hidden">
-      {/* Background orbs */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-brand-600/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
 
       <div className="relative w-full max-w-md animate-slide-up">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/30">
             <Zap size={26} className="text-white" />
@@ -33,7 +68,6 @@ function AuthForm({ isLogin, setPage }) {
         </div>
 
         <div className="glass-card p-8">
-          {/* Social Login */}
           <button className="w-full flex items-center justify-center gap-3 btn-secondary mb-6 py-3">
             <span className="text-lg">G</span>
             <span className="text-sm">Continue with Google</span>
@@ -49,7 +83,14 @@ function AuthForm({ isLogin, setPage }) {
             {!isLogin && (
               <div>
                 <label className="block text-sm text-slate-400 mb-1.5">Full Name</label>
-                <input type="text" placeholder="Ravi Sharma" className="input-field" required />
+                <input
+                  type="text"
+                  placeholder="Ravi Sharma"
+                  className="input-field"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                />
               </div>
             )}
 
@@ -57,7 +98,14 @@ function AuthForm({ isLogin, setPage }) {
               <label className="block text-sm text-slate-400 mb-1.5">Email Address</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input type="email" placeholder="you@company.com" className="input-field pl-10" required />
+                <input
+                  type="email"
+                  placeholder="you@company.com"
+                  className="input-field pl-10"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                />
               </div>
             </div>
 
@@ -69,6 +117,8 @@ function AuthForm({ isLogin, setPage }) {
                   type={show ? 'text' : 'password'}
                   placeholder="••••••••"
                   className="input-field pl-10 pr-10"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
                   required
                 />
                 <button
@@ -84,9 +134,17 @@ function AuthForm({ isLogin, setPage }) {
             {!isLogin && (
               <div>
                 <label className="block text-sm text-slate-400 mb-1.5">Company / Business Name</label>
-                <input type="text" placeholder="SpiceRoute Exports Pvt. Ltd." className="input-field" />
+                <input
+                  type="text"
+                  placeholder="SpiceRoute Exports Pvt. Ltd."
+                  className="input-field"
+                  value={form.company}
+                  onChange={(e) => setForm({ ...form, company: e.target.value })}
+                />
               </div>
             )}
+
+            {error && <p className="text-danger-400 text-sm">{error}</p>}
 
             {isLogin && (
               <div className="flex justify-end">
