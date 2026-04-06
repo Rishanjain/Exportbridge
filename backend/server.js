@@ -12,6 +12,7 @@ const guideRoutes = require('./routes/guide');
 const shipmentRoutes = require('./routes/shipments');
 const analyticsRoutes = require('./routes/analytics');
 const metaRoutes = require('./routes/meta');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 app.use(cors());
@@ -42,6 +43,7 @@ app.use('/api/guide', guideRoutes);
 app.use('/api/shipments', shipmentRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/meta', metaRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

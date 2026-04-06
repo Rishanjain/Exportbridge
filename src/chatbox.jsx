@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { apiFetch } from "./lib/api";
 
 const STEPS = [
   {
@@ -167,48 +168,11 @@ export default function ExportChatbot() {
 
 
   const callClaudeAPI = async (data) => {
-  const prompt = `You are an expert international trade consultant.
-Business Profile: ${data.businessProfile}
-Product: ${data.product}
-Target Market: ${data.market}
-
-Respond ONLY with valid JSON (no markdown):
-{
-  "score": <0-100>,
-  "summary": "<2-3 line Hindi-English summary>",
-  "breakdown": [
-    {"factor": "Market Demand", "score": <0-100>, "note": "<short note>"},
-    {"factor": "Product Competitiveness", "score": <0-100>, "note": "<short note>"},
-    {"factor": "Business Readiness", "score": <0-100>, "note": "<short note>"},
-    {"factor": "Regulatory Ease", "score": <0-100>, "note": "<short note>"},
-    {"factor": "Profit Potential", "score": <0-100>, "note": "<short note>"}
-  ],
-  "topOpportunity": "<1 line>",
-  "topRisk": "<1 line>",
-  "nextStep": "<1 line>"
-}`;
-
-  const API_KEY = "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"; 
-  // const API_KEY = process.env.REACT_APP_GROQ_KEY; 
-
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile", 
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 1000,
-    }),
-  });
-
-  const result = await response.json();
-  const raw = result.choices[0].message.content;
-  const clean = raw.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
-};
+    return await apiFetch('/api/chat', {
+      method: "POST",
+      body: data
+    });
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isTyping || done) return;

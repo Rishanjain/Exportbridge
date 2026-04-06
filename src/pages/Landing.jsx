@@ -3,7 +3,71 @@ import {
   Globe, ArrowRight, Zap, Brain, FileCheck, Banknote, Ship, BarChart3,
   Star, CheckCircle, ChevronRight, Menu, X
 } from 'lucide-react';
-import { testimonials, features } from '../data/mockData';
+const testimonials = [
+  {
+    name: 'Ravi Sharma',
+    role: 'Founder, SpiceRoute Exports',
+    avatar: 'RS',
+    text: 'ExportBridge helped us find verified buyers in UAE within 2 weeks. Our export revenue doubled in 6 months.',
+    rating: 5,
+    country: '🇮🇳',
+  },
+  {
+    name: 'Priya Mehta',
+    role: 'MD, Craftopia Textiles',
+    avatar: 'PM',
+    text: "The AI recommendations were spot on. We shipped to Germany for the first time thanks to ExportBridge's guidance.",
+    rating: 5,
+    country: '🇮🇳',
+  },
+  {
+    name: 'Arjun Patel',
+    role: 'CEO, MedExport India',
+    avatar: 'AP',
+    text: 'Got EXIM Bank funding approved in 3 weeks. The entire process was streamlined through the platform.',
+    rating: 5,
+    country: '🇮🇳',
+  },
+];
+
+const features = [
+  {
+    icon: 'Globe',
+    title: 'Global Buyer Network',
+    description: '10,000+ verified international buyers across 80+ countries ready to connect.',
+    color: 'brand',
+  },
+  {
+    icon: 'Brain',
+    title: 'AI Market Intelligence',
+    description: 'AI-powered demand forecasting tells you exactly where to sell and when.',
+    color: 'purple',
+  },
+  {
+    icon: 'FileCheck',
+    title: 'Export Compliance',
+    description: 'Step-by-step guidance on IEC, GST, customs documentation and more.',
+    color: 'emerald',
+  },
+  {
+    icon: 'Banknote',
+    title: 'Export Financing',
+    description: 'Access government loans, trade credit and investor funding in one place.',
+    color: 'amber',
+  },
+  {
+    icon: 'Ship',
+    title: 'Logistics Network',
+    description: 'Compare shipping providers, get real-time tracking and optimize costs.',
+    color: 'cyan',
+  },
+  {
+    icon: 'BarChart3',
+    title: 'Analytics & Reports',
+    description: 'Detailed export performance analytics and market trend dashboards.',
+    color: 'rose',
+  },
+];
 
 const steps = [
   { num: '01', title: 'List Your Products', desc: 'Upload products with details. Our AI instantly analyzes global demand.' },
