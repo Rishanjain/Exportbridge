@@ -1,6 +1,7 @@
 import { ArrowRight, Percent, Users, Landmark, TrendingUp } from 'lucide-react';
 import { Card, Badge, ProgressBar, SectionHeader } from '../components/ui/index';
-import { fundingOptions } from '../data/mockData';
+import { useEffect, useState } from 'react';
+import { apiFetch } from '../lib/api';
 
 const typeIcons = {
   'Government Loan': Landmark,
@@ -21,12 +22,51 @@ const approvalColor = (pct) => {
 };
 
 export default function Funding() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [fundingOptions, setFundingOptions] = useState([]);
+  const [submittingId, setSubmittingId] = useState(null);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError('');
+    apiFetch('/api/funding/options')
+      .then((data) => mounted && setFundingOptions(data.fundingOptions || []))
+      .catch((e) => mounted && setError(e.message || 'Failed to load funding options'))
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const apply = async (optionId) => {
+    setSubmittingId(optionId);
+    setMessage('');
+    setError('');
+    try {
+      const data = await apiFetch('/api/funding/apply', { method: 'POST', body: { optionId } });
+      setMessage(`${data.message} (${data.application?.id})`);
+    } catch (e) {
+      setError(e.message || 'Unable to submit application');
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <SectionHeader
         title="Funding & Finance"
         subtitle="Loans, credit facilities and investor matches for your export business"
       />
+
+      {(error || message) && (
+        <Card hover={false} className={error ? 'border-red-500/20' : 'border-emerald-500/20'}>
+          <p className={`text-sm ${error ? 'text-red-400' : 'text-emerald-400'}`}>{error || message}</p>
+        </Card>
+      )}
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
@@ -49,6 +89,13 @@ export default function Funding() {
 
       {/* Funding Cards */}
       <div className="grid md:grid-cols-2 gap-5">
+        {loading && Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="glass-card p-6 animate-pulse">
+            <div className="h-4 bg-surface-500 rounded w-1/2 mb-3" />
+            <div className="h-10 bg-surface-500 rounded w-2/3 mb-4" />
+            <div className="h-10 bg-surface-500 rounded" />
+          </div>
+        ))}
         {fundingOptions.map((f) => {
           const TypeIcon = typeIcons[f.type] || Landmark;
           const approvalCol = approvalColor(f.approval);
@@ -98,8 +145,12 @@ export default function Funding() {
                 ))}
               </div>
 
-              <button className="btn-primary w-full flex items-center justify-center gap-2 mt-4 py-3">
-                Apply Now <ArrowRight size={14} />
+              <button
+                onClick={() => apply(f.id)}
+                disabled={submittingId === f.id}
+                className="btn-primary w-full flex items-center justify-center gap-2 mt-4 py-3"
+              >
+                {submittingId === f.id ? 'Submitting…' : 'Apply Now'} <ArrowRight size={14} />
               </button>
             </Card>
           );

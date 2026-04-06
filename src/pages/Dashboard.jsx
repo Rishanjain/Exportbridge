@@ -1,6 +1,7 @@
 import { TrendingUp, Users, DollarSign, Award, Package, Globe, Ship, Clock } from 'lucide-react';
 import { StatCard, Card, Badge, ProgressBar, SectionHeader } from '../components/ui/index';
-import { statsData, recentActivity, marketInsights } from '../data/mockData';
+import { useEffect, useState } from 'react';
+import { apiFetch } from '../lib/api';
 
 const activityIcons = {
   buyer: Users,
@@ -22,6 +23,60 @@ const iconComponents = { TrendingUp, Users, DollarSign, Award };
 const cardColors = ['brand', 'emerald', 'purple', 'amber'];
 
 export default function Dashboard() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [statsData, setStatsData] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [marketInsights, setMarketInsights] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError('');
+    apiFetch('/api/dashboard')
+      .then((data) => {
+        if (!mounted) return;
+        setStatsData(data.statsData || []);
+        setRecentActivity(data.recentActivity || []);
+        setMarketInsights(data.marketInsights || []);
+      })
+      .catch((e) => {
+        if (!mounted) return;
+        setError(e.message || 'Failed to load dashboard');
+      })
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <SectionHeader title="Dashboard" subtitle="Loading your export workspace..." />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="glass-card p-6 animate-pulse">
+              <div className="h-4 bg-surface-500 rounded w-1/2 mb-4" />
+              <div className="h-8 bg-surface-500 rounded w-2/3" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <SectionHeader title="Dashboard" subtitle="Your export workspace" />
+        <Card hover={false} className="border-red-500/20">
+          <p className="text-red-400 text-sm">{error}</p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* KPI Cards */}

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Package, ChevronDown, Loader, Sparkles } from 'lucide-react';
 import { Card, SectionHeader, Badge, ProgressBar } from '../components/ui/index';
-import { aiRecommendations, categories } from '../data/mockData';
+import { useEffect } from 'react';
+import { apiFetch } from '../lib/api';
 
 const demandBadge = (level) => {
   if (level === 'High') return 'success';
@@ -13,15 +14,55 @@ export default function ProductUpload({ setPage }) {
   const [form, setForm] = useState({ name: '', category: '', price: '', desc: '' });
   const [loading, setLoading] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
+  const [error, setError] = useState('');
+  const [categories, setCategories] = useState([]);
 
-  const handleAnalyze = (e) => {
+  useEffect(() => {
+    let mounted = true;
+    apiFetch('/api/meta/categories')
+      .then((data) => mounted && setCategories(data.categories || []))
+      .catch(() => mounted && setCategories([]));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleAnalyze = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.category) return;
+    setError('');
+
+    if (!form.name || !form.category) {
+      setError('Please fill in the product name and category.');
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify(form),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || 'Unable to analyze product');
+        setLoading(false);
+        return;
+      }
+
+      setAnalysis(data.analysis);
       setAnalyzed(true);
-    }, 2000);
+    } catch (err) {
+      setError('Network error: please try again');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,7 +73,6 @@ export default function ProductUpload({ setPage }) {
       />
 
       <div className="grid lg:grid-cols-5 gap-6">
-        {/* Form */}
         <div className="lg:col-span-2">
           <Card>
             <div className="flex items-center gap-3 mb-6">
@@ -101,6 +141,8 @@ export default function ProductUpload({ setPage }) {
                 />
               </div>
 
+              {error && <p className="text-danger-400 text-sm">{error}</p>}
+
               <button
                 type="submit"
                 disabled={loading}
@@ -122,13 +164,10 @@ export default function ProductUpload({ setPage }) {
           </Card>
         </div>
 
-        {/* AI Results */}
         <div className="lg:col-span-3 space-y-4">
           <div className="flex items-center justify-between">
             <p className="font-semibold text-white">AI Market Recommendations</p>
-            {analyzed && (
-              <Badge variant="success">Analysis Complete</Badge>
-            )}
+            {analyzed && <Badge variant="success">Analysis Complete</Badge>}
           </div>
 
           {!analyzed && !loading && (
@@ -159,60 +198,60 @@ export default function ProductUpload({ setPage }) {
             </div>
           )}
 
-          {analyzed && (
+          {analyzed && analysis && (
             <div className="space-y-4">
-              {/* Export Readiness Score */}
               <Card className="border-brand-500/20 bg-gradient-to-br from-brand-500/10 to-purple-500/5">
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-semibold text-white">Export Readiness Score</p>
-                  <span className="text-2xl font-black gradient-text">78/100</span>
+                  <span className="text-2xl font-black gradient-text">{analysis.score}/100</span>
                 </div>
-                <ProgressBar value={78} color="brand" height="h-3" />
+                <ProgressBar value={analysis.score} color="brand" height="h-3" />
                 <div className="grid grid-cols-3 gap-4 mt-4">
-                  {[
-                    { label: 'Product Quality', val: 85 },
-                    { label: 'Market Fit', val: 78 },
-                    { label: 'Compliance Ready', val: 62 },
-                  ].map(({ label, val }) => (
-                    <div key={label} className="text-center">
-                      <p className="text-xs text-slate-500 mb-1">{label}</p>
-                      <p className="text-lg font-bold text-white">{val}</p>
-                    </div>
-                  ))}
+                  <div className="text-center">
+                    <p className="text-xs text-slate-500 mb-1">Product Quality</p>
+                    <p className="text-lg font-bold text-white">{analysis.breakdown.quality}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-slate-500 mb-1">Market Fit</p>
+                    <p className="text-lg font-bold text-white">{analysis.breakdown.marketFit}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-slate-500 mb-1">Compliance Ready</p>
+                    <p className="text-lg font-bold text-white">{analysis.breakdown.complianceReady}</p>
+                  </div>
                 </div>
               </Card>
 
-              {/* Recommendation Cards */}
-              {aiRecommendations.map((rec) => (
-                <Card key={rec.id} className={`hover:border-${rec.demandLevel === 'High' ? 'emerald' : 'amber'}-500/20`}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">{rec.flag}</span>
-                      <div>
-                        <p className="font-semibold text-white">{rec.country}</p>
-                        <p className="text-xs text-slate-500">{rec.category}</p>
+              <Card>
+                <p className="text-sm text-slate-400 mb-4">{analysis.insights}</p>
+                {analysis.recommendations.map((rec) => (
+                  <Card key={rec.id} className="mb-4 border-slate-700/60">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="text-3xl">🌍</div>
+                        <div>
+                          <p className="font-semibold text-white">{rec.country}</p>
+                          <p className="text-xs text-slate-500">{rec.category}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={demandBadge(rec.demandLevel)}>{rec.demandLevel} Demand</Badge>
+                        <p className="text-xs text-emerald-400 mt-1">{rec.marketSize} market</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <Badge variant={demandBadge(rec.demandLevel)}>
-                        {rec.demandLevel} Demand
-                      </Badge>
-                      <p className="text-xs text-emerald-400 mt-1">{rec.growth}</p>
+                    <p className="text-sm text-slate-400 leading-relaxed mb-3">{rec.reason}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-xs text-slate-500">
+                        <span>Score: <span className="text-white font-medium">{rec.score}/100</span></span>
+                      </div>
+                      <button className="btn-primary text-xs px-4 py-2">Explore</button>
                     </div>
-                  </div>
-                  <p className="text-sm text-slate-400 leading-relaxed mb-3">{rec.reason}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-xs text-slate-500">
-                      <span>Market Size: <span className="text-white font-medium">{rec.marketSize}</span></span>
-                      <span>Score: <span className="text-brand-400 font-bold">{rec.score}/100</span></span>
+                    <div className="mt-3">
+                      <ProgressBar value={rec.score} color="brand" height="h-1.5" />
                     </div>
-                    <button className="btn-primary text-xs px-4 py-2">Explore</button>
-                  </div>
-                  <div className="mt-3">
-                    <ProgressBar value={rec.score} color="brand" height="h-1.5" />
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))}
+              </Card>
             </div>
           )}
         </div>

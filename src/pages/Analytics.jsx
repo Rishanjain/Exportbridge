@@ -3,7 +3,8 @@ import {
   ResponsiveContainer, Legend, AreaChart, Area
 } from 'recharts';
 import { Card, Badge, SectionHeader } from '../components/ui/index';
-import { demandTrends, exportPerformance } from '../data/mockData';
+import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '../lib/api';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -26,9 +27,61 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Analytics() {
-  const totalRevenue = exportPerformance.reduce((a, b) => a + b.revenue, 0);
-  const totalOrders = exportPerformance.reduce((a, b) => a + b.orders, 0);
-  const avgOrderValue = Math.round(totalRevenue / totalOrders);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [demandTrends, setDemandTrends] = useState([]);
+  const [exportPerformance, setExportPerformance] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError('');
+    apiFetch('/api/analytics')
+      .then((data) => {
+        if (!mounted) return;
+        setDemandTrends(data.demandTrends || []);
+        setExportPerformance(data.exportPerformance || []);
+      })
+      .catch((e) => mounted && setError(e.message || 'Failed to load analytics'))
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const kpis = useMemo(() => {
+    const totalRevenue = exportPerformance.reduce((a, b) => a + (b.revenue || 0), 0);
+    const totalOrders = exportPerformance.reduce((a, b) => a + (b.orders || 0), 0);
+    const avgOrderValue = totalOrders ? Math.round(totalRevenue / totalOrders) : 0;
+    return { totalRevenue, totalOrders, avgOrderValue };
+  }, [exportPerformance]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <SectionHeader title="Analytics & Reports" subtitle="Loading export performance..." />
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="glass-card p-5 animate-pulse">
+              <div className="h-3 bg-surface-500 rounded w-1/2 mb-3" />
+              <div className="h-8 bg-surface-500 rounded w-2/3" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <SectionHeader title="Analytics & Reports" subtitle="Export performance and global demand trends" />
+        <Card hover={false} className="border-red-500/20">
+          <p className="text-red-400 text-sm">{error}</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -47,9 +100,9 @@ export default function Analytics() {
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Total Revenue (7M)', value: `$${(totalRevenue / 1000).toFixed(0)}K`, change: '+18.2%' },
-          { label: 'Total Orders', value: totalOrders, change: '+11 orders' },
-          { label: 'Avg Order Value', value: `$${avgOrderValue.toLocaleString()}`, change: '+$240' },
+          { label: 'Total Revenue (7M)', value: `$${(kpis.totalRevenue / 1000).toFixed(0)}K`, change: '+18.2%' },
+          { label: 'Total Orders', value: kpis.totalOrders, change: '+11 orders' },
+          { label: 'Avg Order Value', value: `$${kpis.avgOrderValue.toLocaleString()}`, change: '+$240' },
         ].map(({ label, value, change }) => (
           <div key={label} className="glass-card p-5 hover:-translate-y-0.5 transition-all">
             <p className="text-slate-500 text-xs mb-1">{label}</p>

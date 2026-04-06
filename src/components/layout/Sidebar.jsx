@@ -1,7 +1,7 @@
 import { 
   LayoutDashboard, Globe, Users, BookOpen, Banknote, 
   Ship, BarChart3, Package, ChevronLeft, ChevronRight,
-  Bell, Zap, LogOut, Settings
+  Zap, LogOut, Settings
 } from 'lucide-react';
 
 const navItems = [
@@ -15,7 +15,7 @@ const navItems = [
   { id: 'upload', label: 'Upload Product', icon: Package },
 ];
 
-export default function Sidebar({ currentPage, setCurrentPage, collapsed, setCollapsed }) {
+export default function Sidebar({ currentPage, setCurrentPage, onLogout, collapsed, setCollapsed }) {
   return (
     <aside
       className={`fixed left-0 top-0 h-full z-50 flex flex-col transition-all duration-300 ${
@@ -56,7 +56,11 @@ export default function Sidebar({ currentPage, setCurrentPage, collapsed, setCol
           <Settings size={18} className="flex-shrink-0" />
           {!collapsed && <span>Settings</span>}
         </button>
-        <button className="sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-500/10" title={collapsed ? 'Logout' : ''}>
+        <button
+          onClick={onLogout}
+          className="sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          title={collapsed ? 'Logout' : ''}
+        >
           <LogOut size={18} className="flex-shrink-0" />
           {!collapsed && <span>Logout</span>}
         </button>
